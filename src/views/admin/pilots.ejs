@@ -1,0 +1,50 @@
+<%- include('../partials/header') %>
+
+<div class="page">
+  <h1>Pilotit</h1>
+
+  <% if (errors) { %>
+    <div class="alert alert-error"><% errors.forEach(e => { %><p><%= e.msg %></p><% }) %></div>
+  <% } %>
+
+  <div class="card" style="margin-bottom: 1.5rem">
+    <h2>Lisää pilotti</h2>
+    <form method="POST" action="/admin/pilots" class="form form-inline">
+      <div class="form-group">
+        <label for="name">Nimi</label>
+        <input type="text" id="name" name="name" required>
+      </div>
+      <div class="form-group">
+        <label for="note">Huomautus</label>
+        <input type="text" id="note" name="note" placeholder="esim. Oppilas">
+      </div>
+      <button type="submit" class="btn btn-primary">Lisää</button>
+    </form>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Nimi</th><th>Huomautus</th><th>Kausari</th><th>Tila</th><th>Toiminnot</th></tr></thead>
+      <tbody>
+        <% pilots.forEach(p => { %>
+          <tr class="<%= !p.active ? 'row-inactive' : '' %>">
+            <form method="POST" action="/admin/pilots/<%= p.id %>">
+              <td><input type="text" name="name" value="<%= p.name %>" class="input-table" required></td>
+              <td><input type="text" name="note" value="<%= p.note || '' %>" class="input-table"></td>
+              <td><span class="status-dot <%= p.has_season_pass ? 'status-ok' : 'status-no' %>"><%= p.has_season_pass ? 'Maksettu' : 'Ei' %></span></td>
+              <td>
+                <label class="checkbox-label">
+                  <input type="checkbox" name="active" <%= p.active ? 'checked' : '' %>>
+                  Aktiivinen
+                </label>
+              </td>
+              <td><button type="submit" class="btn btn-small">Tallenna</button></td>
+            </form>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

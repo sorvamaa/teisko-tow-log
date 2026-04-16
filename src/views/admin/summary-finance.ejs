@@ -1,0 +1,75 @@
+<%- include('../partials/header') %>
+
+<div class="page">
+  <h1>Talousyhteenveto</h1>
+
+  <form method="GET" action="/admin/summary/finance" class="form form-inline" style="margin-bottom: 1.5rem">
+    <div class="form-group">
+      <label for="from">Alkaen</label>
+      <input type="date" id="from" name="from" value="<%= dateFrom %>">
+    </div>
+    <div class="form-group">
+      <label for="to">Päättyen</label>
+      <input type="date" id="to" name="to" value="<%= dateTo %>">
+    </div>
+    <button type="submit" class="btn btn-primary">Suodata</button>
+  </form>
+
+  <div class="summary-grid">
+    <div class="summary-card">
+      <div class="summary-label">Tulot (maksut)</div>
+      <div class="summary-value text-success"><%= totalIncome.toFixed(2) %> &euro;</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-label">Menot (kulut)</div>
+      <div class="summary-value text-danger"><%= totalExpenses.toFixed(2) %> &euro;</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-label">Tulos</div>
+      <div class="summary-value <%= result >= 0 ? 'text-success' : 'text-danger' %>"><%= result.toFixed(2) %> &euro;</div>
+    </div>
+  </div>
+
+  <div class="detail-section">
+    <h2>Maksut tyypeittäin</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Tyyppi</th><th>Kpl</th><th>Yhteensä</th></tr></thead>
+        <tbody>
+          <% paymentsByType.forEach(p => { %>
+            <tr>
+              <td><%= p.type === 'daily' ? 'Päivämaksu (10 €)' : 'Kausikortti (50 €)' %></td>
+              <td><%= p.count %></td>
+              <td><%= parseFloat(p.total).toFixed(2) %> &euro;</td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="detail-section">
+    <h2>Kulut</h2>
+    <% if (expenseList.length === 0) { %>
+      <p class="text-muted">Ei kuluja valitulla ajanjaksolla.</p>
+    <% } else { %>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Pvm</th><th>Summa</th><th>Hankkija</th><th>Kuvaus</th></tr></thead>
+          <tbody>
+            <% expenseList.forEach(e => { %>
+              <tr>
+                <td><%= new Date(e.date).toLocaleDateString('fi-FI') %></td>
+                <td><%= parseFloat(e.amount).toFixed(2) %> &euro;</td>
+                <td><%= e.purchased_by %></td>
+                <td><%= e.description %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

@@ -1,0 +1,22 @@
+<nav class="navbar">
+  <a href="/" class="nav-brand">Teisko Tow Log</a>
+  <% if (user) { %>
+    <button class="nav-toggle" onclick="this.parentElement.classList.toggle('nav-open')" aria-label="Valikko">&#9776;</button>
+    <div class="nav-links">
+      <% if (user.role === 'admin') { %>
+        <a href="/flight-days">Lentopäivät</a>
+        <a href="/admin/pilots">Pilotit</a>
+        <a href="/admin/vehicles">Ajoneuvot</a>
+        <a href="/admin/payments">Maksut</a>
+        <a href="/admin/expenses">Kulut</a>
+        <a href="/admin/summary/tows">Hinaukset</a>
+        <a href="/admin/summary/finance">Talous</a>
+        <a href="/admin/users">Käyttäjät</a>
+      <% } %>
+      <span class="nav-user"><%= user.name %></span>
+      <form method="POST" action="/auth/logout" class="nav-logout">
+        <button type="submit">Kirjaudu ulos</button>
+      </form>
+    </div>
+  <% } %>
+</nav>

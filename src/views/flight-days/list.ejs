@@ -1,0 +1,31 @@
+<%- include('../partials/header') %>
+
+<div class="page">
+  <div class="page-header">
+    <h1>Lentopäivät</h1>
+    <a href="/flight-days/new" class="btn btn-primary">+ Uusi lentopäivä</a>
+  </div>
+
+  <% if (flightDays.length === 0) { %>
+    <p class="empty-state">Ei vielä kirjattuja lentopäiviä.</p>
+  <% } else { %>
+    <div class="card-list">
+      <% flightDays.forEach(fd => { %>
+        <a href="/flight-days/<%= fd.id %>" class="card card-link">
+          <div class="card-header">
+            <strong><%= new Date(fd.date).toLocaleDateString('fi-FI') %></strong>
+            <div class="badge-group">
+              <span class="badge"><%= fd.total_tows %> hinausta</span>
+              <span class="badge badge-secondary"><%= fd.pilot_count %> pilottia</span>
+            </div>
+          </div>
+          <% if (fd.notes) { %>
+            <p class="card-note"><%= fd.notes %></p>
+          <% } %>
+        </a>
+      <% }) %>
+    </div>
+  <% } %>
+</div>
+
+<%- include('../partials/footer') %>

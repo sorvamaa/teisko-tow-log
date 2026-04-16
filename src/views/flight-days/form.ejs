@@ -1,0 +1,75 @@
+<%- include('../partials/header') %>
+
+<div class="page">
+  <h1><%= title %></h1>
+
+  <% if (errors) { %>
+    <div class="alert alert-error">
+      <% errors.forEach(e => { %><p><%= e.msg %></p><% }) %>
+    </div>
+  <% } %>
+
+  <form method="POST" action="<%= flightDay && flightDay.id ? '/flight-days/' + flightDay.id : '/flight-days' %>" class="form">
+
+    <div class="form-group">
+      <label for="date">Päivämäärä</label>
+      <input type="date" id="date" name="date"
+        value="<%= flightDay ? (flightDay.date instanceof Date ? flightDay.date.toISOString().split('T')[0] : flightDay.date) : new Date().toISOString().split('T')[0] %>" required>
+    </div>
+
+    <fieldset class="form-fieldset">
+      <legend>Hinausajoneuvot ja hinausmäärät</legend>
+      <% vehicles.forEach(v => { %>
+        <% const vMap = flightDay && flightDay.vehicleMap ? flightDay.vehicleMap : {}; %>
+        <% const count = vMap[String(v.id)] || 0; %>
+        <div class="vehicle-row">
+          <label class="vehicle-label" for="tow_<%= v.id %>"><%= v.name %></label>
+          <input type="number" id="tow_<%= v.id %>" name="tow_<%= v.id %>" class="input-small"
+            min="0" value="<%= count %>">
+        </div>
+      <% }) %>
+    </fieldset>
+
+    <fieldset class="form-fieldset">
+      <legend>Paikalla olleet pilotit</legend>
+
+      <div class="form-group">
+        <input type="text" id="pilot-search" placeholder="Hae pilottia nimellä..." autocomplete="off">
+      </div>
+
+      <div id="pilot-list" class="pilot-select-list">
+        <% pilots.forEach(p => { %>
+          <% const pIds = flightDay && flightDay.pilotIds ? flightDay.pilotIds.map(String) : []; %>
+          <label class="pilot-option <%= pIds.includes(String(p.id)) ? 'selected' : '' %>" data-name="<%= p.name.toLowerCase() %>">
+            <input type="checkbox" name="pilot_ids" value="<%= p.id %>"
+              <%= pIds.includes(String(p.id)) ? 'checked' : '' %>>
+            <span class="pilot-option-name"><%= p.name %></span>
+            <% if (p.note) { %><span class="text-muted">(<%= p.note %>)</span><% } %>
+          </label>
+        <% }) %>
+      </div>
+
+      <div class="new-pilot-section">
+        <label>Lisää uusia pilotteja</label>
+        <div id="new-pilots-container"></div>
+        <div class="new-pilot-row">
+          <input type="text" id="new-pilot-input" placeholder="Pilotin nimi">
+          <button type="button" id="add-pilot-btn" class="btn">+ Lisää</button>
+        </div>
+      </div>
+    </fieldset>
+
+    <div class="form-group">
+      <label for="notes">Huomautukset</label>
+      <textarea id="notes" name="notes" rows="3"><%= flightDay ? (flightDay.notes || '') : '' %></textarea>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">Tallenna</button>
+      <a href="/flight-days" class="btn">Peruuta</a>
+    </div>
+  </form>
+</div>
+
+<script src="/js/flight-day-form.js"></script>
+<%- include('../partials/footer') %>

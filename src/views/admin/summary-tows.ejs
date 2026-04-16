@@ -1,0 +1,81 @@
+<%- include('../partials/header') %>
+
+<div class="page">
+  <h1>Hinausyhteenveto</h1>
+
+  <form method="GET" action="/admin/summary/tows" class="form form-inline" style="margin-bottom: 1.5rem">
+    <div class="form-group">
+      <label for="from">Alkaen</label>
+      <input type="date" id="from" name="from" value="<%= dateFrom %>">
+    </div>
+    <div class="form-group">
+      <label for="to">Päättyen</label>
+      <input type="date" id="to" name="to" value="<%= dateTo %>">
+    </div>
+    <button type="submit" class="btn btn-primary">Suodata</button>
+  </form>
+
+  <div class="summary-grid">
+    <div class="summary-card">
+      <div class="summary-label">Hinauksia yhteensä</div>
+      <div class="summary-value"><%= totalTows %></div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-label">Lentopäiviä</div>
+      <div class="summary-value"><%= flightDayCount %></div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-label">Keskiarvo / päivä</div>
+      <div class="summary-value"><%= flightDayCount > 0 ? (totalTows / flightDayCount).toFixed(1) : '0' %></div>
+    </div>
+  </div>
+
+  <div class="detail-section">
+    <h2>Per ajoneuvo</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Ajoneuvo</th><th>Hinauksia</th></tr></thead>
+        <tbody>
+          <% towsByVehicle.forEach(v => { %>
+            <tr><td><%= v.name %></td><td><%= v.total_tows %></td></tr>
+          <% }) %>
+          <tr class="table-total"><td><strong>Yhteensä</strong></td><td><strong><%= totalTows %></strong></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="detail-section">
+    <h2>Per lentopäivä</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Päivämäärä</th><th>Hinauksia</th><th>Pilotteja</th></tr></thead>
+        <tbody>
+          <% towsByDay.forEach(d => { %>
+            <tr>
+              <td><%= new Date(d.date).toLocaleDateString('fi-FI') %></td>
+              <td><%= d.total_tows %></td>
+              <td><%= d.pilot_count %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="detail-section">
+    <h2>Pilottien lentopäivät</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Pilotti</th><th>Lentopäiviä</th></tr></thead>
+        <tbody>
+          <% pilotStats.forEach(p => { %>
+            <tr><td><%= p.name %></td><td><%= p.flight_days %></td></tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

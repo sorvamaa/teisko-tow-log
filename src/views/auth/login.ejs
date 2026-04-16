@@ -1,0 +1,21 @@
+<%- include('../partials/header') %>
+
+<div class="auth-page">
+  <h1>Kirjaudu sisään</h1>
+  <% if (error) { %>
+    <div class="alert alert-error"><%= error %></div>
+  <% } %>
+  <form method="POST" action="/auth/login" class="form">
+    <div class="form-group">
+      <label for="email">Sähköposti</label>
+      <input type="email" id="email" name="email" required autofocus>
+    </div>
+    <div class="form-group">
+      <label for="password">Salasana</label>
+      <input type="password" id="password" name="password" required>
+    </div>
+    <button type="submit" class="btn btn-primary">Kirjaudu</button>
+  </form>
+</div>
+
+<%- include('../partials/footer') %>

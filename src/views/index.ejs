@@ -1,0 +1,19 @@
+<%- include('partials/header') %>
+
+<div class="page home-page">
+  <h1>Teisko Tow Log</h1>
+  <p class="home-date"><%= new Date().toLocaleDateString('fi-FI', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) %></p>
+
+  <% if (todayFlightDay) { %>
+    <div class="home-actions">
+      <a href="/flight-days/<%= todayFlightDay.id %>/edit" class="btn btn-primary btn-large">Muokkaa tämän päivän kirjausta</a>
+      <a href="/flight-days/<%= todayFlightDay.id %>" class="btn btn-large">Näytä tiedot</a>
+    </div>
+  <% } else { %>
+    <div class="home-actions">
+      <a href="/flight-days/new" class="btn btn-primary btn-large">Aloita lentopäivä</a>
+    </div>
+  <% } %>
+</div>
+
+<%- include('partials/footer') %>

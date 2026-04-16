@@ -1,0 +1,44 @@
+<%- include('../partials/header') %>
+
+<div class="page">
+  <h1>Hinausajoneuvot</h1>
+
+  <% if (errors) { %>
+    <div class="alert alert-error"><% errors.forEach(e => { %><p><%= e.msg %></p><% }) %></div>
+  <% } %>
+
+  <div class="card" style="margin-bottom: 1.5rem">
+    <h2>Lisää ajoneuvo</h2>
+    <form method="POST" action="/admin/vehicles" class="form form-inline">
+      <div class="form-group">
+        <label for="name">Nimi</label>
+        <input type="text" id="name" name="name" required>
+      </div>
+      <button type="submit" class="btn btn-primary">Lisää</button>
+    </form>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Nimi</th><th>Tila</th><th>Toiminnot</th></tr></thead>
+      <tbody>
+        <% vehicles.forEach(v => { %>
+          <tr class="<%= !v.active ? 'row-inactive' : '' %>">
+            <form method="POST" action="/admin/vehicles/<%= v.id %>">
+              <td><input type="text" name="name" value="<%= v.name %>" class="input-table" required></td>
+              <td>
+                <label class="checkbox-label">
+                  <input type="checkbox" name="active" <%= v.active ? 'checked' : '' %>>
+                  Aktiivinen
+                </label>
+              </td>
+              <td><button type="submit" class="btn btn-small">Tallenna</button></td>
+            </form>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

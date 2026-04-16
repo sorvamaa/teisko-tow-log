@@ -1,0 +1,76 @@
+<%- include('../partials/header') %>
+
+<div class="page">
+  <h1>Hinausmaksut</h1>
+
+  <% if (errors) { %>
+    <div class="alert alert-error"><% errors.forEach(e => { %><p><%= e.msg %></p><% }) %></div>
+  <% } %>
+
+  <div class="card" style="margin-bottom: 1.5rem">
+    <h2>Kirjaa maksu</h2>
+    <form method="POST" action="/admin/payments" class="form">
+      <div class="form-row">
+        <div class="form-group">
+          <label for="pilot_id">Pilotti</label>
+          <select id="pilot_id" name="pilot_id" required>
+            <option value="">Valitse...</option>
+            <% pilots.forEach(p => { %>
+              <option value="<%= p.id %>"><%= p.name %></option>
+            <% }) %>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="type">Tyyppi</label>
+          <select id="type" name="type" required>
+            <option value="daily">Päivämaksu (10 &euro;)</option>
+            <option value="season">Kausikortti (50 &euro;)</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="payment_method">Maksutapa</label>
+          <select id="payment_method" name="payment_method" required>
+            <option value="MobilePay">MobilePay</option>
+            <option value="Käteinen">Käteinen</option>
+            <option value="Tilisiirto">Tilisiirto</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="date">Päivämäärä</label>
+          <input type="date" id="date" name="date" value="<%= new Date().toISOString().split('T')[0] %>" required>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="note">Huomautus</label>
+        <input type="text" id="note" name="note">
+      </div>
+      <button type="submit" class="btn btn-primary">Kirjaa maksu</button>
+    </form>
+  </div>
+
+  <h2>Maksuhistoria</h2>
+  <% if (payments.length === 0) { %>
+    <p class="empty-state">Ei maksuja.</p>
+  <% } else { %>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Pvm</th><th>Pilotti</th><th>Tyyppi</th><th>Maksutapa</th><th>Huomautus</th></tr></thead>
+        <tbody>
+          <% payments.forEach(p => { %>
+            <tr>
+              <td><%= new Date(p.date).toLocaleDateString('fi-FI') %></td>
+              <td><%= p.pilot_name %></td>
+              <td><%= p.type === 'daily' ? 'Päivämaksu 10 €' : 'Kausikortti 50 €' %></td>
+              <td><%= p.payment_method %></td>
+              <td><%= p.note || '' %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  <% } %>
+</div>
+
+<%- include('../partials/footer') %>

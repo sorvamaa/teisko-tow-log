@@ -1,0 +1,6 @@
+node_modules/
+.env
+*.log
+*.docx
+src/db/import-excel.js
+.claude/

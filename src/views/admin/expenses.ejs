@@ -1,0 +1,64 @@
+<%- include('../partials/header') %>
+
+<div class="page">
+  <h1>Kulut</h1>
+
+  <% if (errors) { %>
+    <div class="alert alert-error"><% errors.forEach(e => { %><p><%= e.msg %></p><% }) %></div>
+  <% } %>
+
+  <div class="card" style="margin-bottom: 1.5rem">
+    <h2>Kirjaa kulu</h2>
+    <form method="POST" action="/admin/expenses" class="form">
+      <div class="form-row">
+        <div class="form-group">
+          <label for="date">Päivämäärä</label>
+          <input type="date" id="date" name="date" value="<%= new Date().toISOString().split('T')[0] %>" required>
+        </div>
+        <div class="form-group">
+          <label for="amount">Summa (&euro;)</label>
+          <input type="number" id="amount" name="amount" step="0.01" min="0" required>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="purchased_by">Kuka hankki</label>
+          <input type="text" id="purchased_by" name="purchased_by" required>
+        </div>
+        <div class="form-group">
+          <label for="description">Mitä</label>
+          <input type="text" id="description" name="description" required>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="note">Huomautus</label>
+        <input type="text" id="note" name="note">
+      </div>
+      <button type="submit" class="btn btn-primary">Kirjaa kulu</button>
+    </form>
+  </div>
+
+  <h2>Kuluhistoria</h2>
+  <% if (expenses.length === 0) { %>
+    <p class="empty-state">Ei kuluja.</p>
+  <% } else { %>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Pvm</th><th>Summa</th><th>Hankkija</th><th>Kuvaus</th><th>Huomautus</th></tr></thead>
+        <tbody>
+          <% expenses.forEach(e => { %>
+            <tr>
+              <td><%= new Date(e.date).toLocaleDateString('fi-FI') %></td>
+              <td><%= parseFloat(e.amount).toFixed(2) %> &euro;</td>
+              <td><%= e.purchased_by %></td>
+              <td><%= e.description %></td>
+              <td><%= e.note || '' %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  <% } %>
+</div>
+
+<%- include('../partials/footer') %>

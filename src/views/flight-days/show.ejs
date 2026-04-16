@@ -1,0 +1,58 @@
+<%- include('../partials/header') %>
+
+<div class="page">
+  <div class="page-header">
+    <h1>Lentopäivä <%= new Date(flightDay.date).toLocaleDateString('fi-FI') %></h1>
+    <div class="btn-group">
+      <a href="/flight-days/<%= flightDay.id %>/edit" class="btn">Muokkaa</a>
+      <form method="POST" action="/flight-days/<%= flightDay.id %>/delete" class="inline"
+            onsubmit="return confirm('Poistetaanko lentopäivä?')">
+        <button type="submit" class="btn btn-danger">Poista</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="detail-section">
+    <h2>Hinaukset</h2>
+    <% if (vehicles.length === 0) { %>
+      <p class="text-muted">Ei hinauksia kirjattu.</p>
+    <% } else { %>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Ajoneuvo</th><th>Hinauksia</th></tr></thead>
+          <tbody>
+            <% let totalTows = 0; %>
+            <% vehicles.forEach(v => { totalTows += v.tow_count; %>
+              <tr><td><%= v.name %></td><td><%= v.tow_count %></td></tr>
+            <% }) %>
+            <tr class="table-total"><td><strong>Yhteensä</strong></td><td><strong><%= totalTows %></strong></td></tr>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </div>
+
+  <div class="detail-section">
+    <h2>Pilotit (<%= pilots.length %>)</h2>
+    <% if (pilots.length === 0) { %>
+      <p class="text-muted">Ei pilotteja kirjattu.</p>
+    <% } else { %>
+      <div class="pilot-list">
+        <% pilots.forEach(p => { %>
+          <span class="pilot-tag"><%= p.name %><% if (p.note) { %> <span class="text-muted">(<%= p.note %>)</span><% } %></span>
+        <% }) %>
+      </div>
+    <% } %>
+  </div>
+
+  <% if (flightDay.notes) { %>
+    <div class="detail-section">
+      <h2>Huomautukset</h2>
+      <p><%= flightDay.notes %></p>
+    </div>
+  <% } %>
+
+  <p class="text-muted" style="margin-top: 1.5rem">Kirjaaja: <%= flightDay.recorder_name || '—' %></p>
+</div>
+
+<%- include('../partials/footer') %>
