@@ -6,7 +6,7 @@ const session = require('express-session');
 const PgSession = require('connect-pg-simple')(session);
 const morgan = require('morgan');
 const pool = require('./db/pool');
-const { setLocals } = require('./middleware/auth');
+const { setLocals, enforcePasswordChange } = require('./middleware/auth');
 
 const app = express();
 
@@ -44,6 +44,7 @@ app.use(session({
 }));
 
 app.use(setLocals);
+app.use(enforcePasswordChange);
 
 app.use('/auth', require('./routes/auth'));
 app.use('/', require('./routes/index'));

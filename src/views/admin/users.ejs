@@ -7,8 +7,24 @@
     <div class="alert alert-error"><% errors.forEach(e => { %><p><%= e.msg %></p><% }) %></div>
   <% } %>
 
+  <% if (resetResult) { %>
+    <div class="alert alert-success">
+      <strong>Salasana resetoitu käyttäjälle <%= resetResult.userName %> (<%= resetResult.userEmail %>)</strong>
+      <p style="margin-top: 0.5rem">Väliaikainen salasana:
+        <code class="temp-password"><%= resetResult.tempPassword %></code>
+      </p>
+      <p class="text-muted" style="margin-top: 0.5rem">
+        Anna tämä salasana käyttäjälle. Hän joutuu vaihtamaan sen ensikirjautumisella.
+        Tämä näytetään vain kerran — kopioi nyt.
+      </p>
+    </div>
+  <% } %>
+
   <div class="card" style="margin-bottom: 1.5rem">
     <h2>Luo käyttäjä</h2>
+    <p class="text-muted" style="margin-bottom: 0.75rem">
+      Käyttäjä joutuu vaihtamaan salasanan ensikirjautumisella.
+    </p>
     <form method="POST" action="/admin/users" class="form">
       <div class="form-row">
         <div class="form-group">
@@ -22,8 +38,8 @@
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label for="password">Salasana</label>
-          <input type="password" id="password" name="password" minlength="6" required>
+          <label for="password">Väliaikainen salasana (vähintään 8 merkkiä)</label>
+          <input type="text" id="password" name="password" minlength="8" required>
         </div>
         <div class="form-group">
           <label for="role">Rooli</label>
@@ -39,7 +55,7 @@
 
   <div class="table-wrap">
     <table>
-      <thead><tr><th>Nimi</th><th>Sähköposti</th><th>Rooli</th><th>Toiminnot</th></tr></thead>
+      <thead><tr><th>Nimi</th><th>Sähköposti</th><th>Rooli</th><th>Salasana</th><th>Toiminnot</th></tr></thead>
       <tbody>
         <% users.forEach(u => { %>
           <tr>
@@ -52,8 +68,25 @@
                   <option value="admin" <%= u.role === 'admin' ? 'selected' : '' %>>Ylläpitäjä</option>
                 </select>
               </td>
-              <td><button type="submit" class="btn btn-small">Tallenna</button></td>
+              <td>
+                <% if (u.must_change_password) { %>
+                  <span class="status-dot status-warning">Vaihdettava</span>
+                <% } else { %>
+                  <span class="text-muted">—</span>
+                <% } %>
+              </td>
+              <td>
+                <div class="btn-group">
+                  <button type="submit" class="btn btn-small">Tallenna</button>
+                </div>
             </form>
+            <% if (u.id !== user.id) { %>
+              <form method="POST" action="/admin/users/<%= u.id %>/reset-password" class="inline"
+                    onsubmit="return confirm('Resetoi <%= u.name %> salasana? Hänen pitää vaihtaa se kirjautumisen jälkeen.')">
+                <button type="submit" class="btn btn-small btn-warning">Resetoi salasana</button>
+              </form>
+            <% } %>
+              </td>
           </tr>
         <% }) %>
       </tbody>

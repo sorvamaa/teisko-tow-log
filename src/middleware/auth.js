@@ -27,4 +27,19 @@ function setLocals(req, res, next) {
   next();
 }
 
-module.exports = { requireAuth, requireAdmin, setLocals };
+// Pakota salasanan vaihto jos must_change_password = true
+function enforcePasswordChange(req, res, next) {
+  if (
+    req.session.userId &&
+    req.session.mustChangePassword &&
+    !req.path.startsWith('/auth/change-password') &&
+    !req.path.startsWith('/auth/logout') &&
+    !req.path.startsWith('/css/') &&
+    !req.path.startsWith('/js/')
+  ) {
+    return res.redirect('/auth/change-password');
+  }
+  next();
+}
+
+module.exports = { requireAuth, requireAdmin, setLocals, enforcePasswordChange };
