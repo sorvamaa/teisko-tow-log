@@ -26,8 +26,13 @@ router.get('/new', requireAuth, async (req, res) => {
     return res.redirect(`/flight-days/${existing.rows[0].id}/edit`);
   }
 
+  const isAdmin = req.session.userRole === 'admin';
+  const vehiclesQuery = isAdmin
+    ? 'SELECT * FROM vehicles WHERE active = true ORDER BY name'
+    : "SELECT * FROM vehicles WHERE active = true AND name = 'Lada' ORDER BY name";
+
   const [vehicles, pilots] = await Promise.all([
-    pool.query('SELECT * FROM vehicles WHERE active = true ORDER BY name'),
+    pool.query(vehiclesQuery),
     pool.query('SELECT * FROM pilots WHERE active = true ORDER BY name')
   ]);
   res.render('flight-days/form', {
@@ -35,7 +40,8 @@ router.get('/new', requireAuth, async (req, res) => {
     flightDay: null,
     vehicles: vehicles.rows,
     pilots: pilots.rows,
-    errors: null
+    errors: null,
+    isAdmin
   });
 });
 
@@ -45,8 +51,12 @@ router.post('/',
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      const isAdmin = req.session.userRole === 'admin';
+      const vehiclesQuery = isAdmin
+        ? 'SELECT * FROM vehicles WHERE active = true ORDER BY name'
+        : "SELECT * FROM vehicles WHERE active = true AND name = 'Lada' ORDER BY name";
       const [vehicles, pilots] = await Promise.all([
-        pool.query('SELECT * FROM vehicles WHERE active = true ORDER BY name'),
+        pool.query(vehiclesQuery),
         pool.query('SELECT * FROM pilots WHERE active = true ORDER BY name')
       ]);
       return res.render('flight-days/form', {
@@ -54,7 +64,8 @@ router.post('/',
         flightDay: req.body,
         vehicles: vehicles.rows,
         pilots: pilots.rows,
-        errors: errors.array()
+        errors: errors.array(),
+        isAdmin
       });
     }
 
@@ -158,9 +169,14 @@ router.get('/:id', requireAuth, async (req, res) => {
 
 router.get('/:id/edit', requireAuth, async (req, res) => {
   const id = parseInt(req.params.id);
+  const isAdmin = req.session.userRole === 'admin';
+  const vehiclesQuery = isAdmin
+    ? 'SELECT * FROM vehicles WHERE active = true ORDER BY name'
+    : "SELECT * FROM vehicles WHERE active = true AND name = 'Lada' ORDER BY name";
+
   const [fd, allVehicles, allPilots, fdVehicles, fdPilots] = await Promise.all([
     pool.query('SELECT * FROM flight_days WHERE id = $1', [id]),
-    pool.query('SELECT * FROM vehicles WHERE active = true ORDER BY name'),
+    pool.query(vehiclesQuery),
     pool.query('SELECT * FROM pilots WHERE active = true ORDER BY name'),
     pool.query('SELECT vehicle_id, tow_count FROM flight_day_vehicles WHERE flight_day_id = $1', [id]),
     pool.query('SELECT pilot_id FROM flight_day_pilots WHERE flight_day_id = $1', [id])
@@ -173,7 +189,7 @@ router.get('/:id/edit', requireAuth, async (req, res) => {
   // User voi muokata vain tänään kirjattua lentopäivää
   const today = new Date().toISOString().split('T')[0];
   const fdDate = new Date(fd.rows[0].date).toISOString().split('T')[0];
-  if (req.session.userRole !== 'admin' && fdDate !== today) {
+  if (!isAdmin && fdDate !== today) {
     return res.redirect('/');
   }
 
@@ -187,7 +203,8 @@ router.get('/:id/edit', requireAuth, async (req, res) => {
     flightDay,
     vehicles: allVehicles.rows,
     pilots: allPilots.rows,
-    errors: null
+    errors: null,
+    isAdmin
   });
 });
 
@@ -218,20 +235,40 @@ router.post('/:id',
         [date, notes || null, id]
       );
 
-      await client.query('DELETE FROM flight_day_vehicles WHERE flight_day_id = $1', [id]);
-      await client.query('DELETE FROM flight_day_pilots WHERE flight_day_id = $1', [id]);
-
+      // Kerää postatut ajoneuvot-tiedot
+      const postedVehicles = [];
       for (const key of Object.keys(req.body)) {
         if (!key.startsWith('tow_')) continue;
         const vid = parseInt(key.replace('tow_', ''));
         const towCount = parseInt(req.body[key]) || 0;
-        if (towCount > 0) {
-          await client.query(
-            'INSERT INTO flight_day_vehicles (flight_day_id, vehicle_id, tow_count) VALUES ($1, $2, $3)',
-            [id, vid, towCount]
-          );
+        postedVehicles.push({ vid, towCount });
+      }
+
+      if (req.session.userRole === 'admin') {
+        // Admin: pyyhi kaikki ja lisää uudet
+        await client.query('DELETE FROM flight_day_vehicles WHERE flight_day_id = $1', [id]);
+        for (const { vid, towCount } of postedVehicles) {
+          if (towCount > 0) {
+            await client.query(
+              'INSERT INTO flight_day_vehicles (flight_day_id, vehicle_id, tow_count) VALUES ($1, $2, $3)',
+              [id, vid, towCount]
+            );
+          }
+        }
+      } else {
+        // User: päivitä vain postatut (Lada), älä koske muihin ajoneuvoihin
+        for (const { vid, towCount } of postedVehicles) {
+          await client.query('DELETE FROM flight_day_vehicles WHERE flight_day_id = $1 AND vehicle_id = $2', [id, vid]);
+          if (towCount > 0) {
+            await client.query(
+              'INSERT INTO flight_day_vehicles (flight_day_id, vehicle_id, tow_count) VALUES ($1, $2, $3)',
+              [id, vid, towCount]
+            );
+          }
         }
       }
+
+      await client.query('DELETE FROM flight_day_pilots WHERE flight_day_id = $1', [id]);
 
       let pilotIds = pilot_ids ? (Array.isArray(pilot_ids) ? pilot_ids : [pilot_ids]) : [];
 
