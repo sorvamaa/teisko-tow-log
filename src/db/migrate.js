@@ -14,7 +14,7 @@ CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "session" ("expire");
 CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
-  email VARCHAR(255) UNIQUE NOT NULL,
+  username VARCHAR(50) UNIQUE NOT NULL,
   password_hash VARCHAR(255) NOT NULL,
   role VARCHAR(20) NOT NULL DEFAULT 'user' CHECK (role IN ('admin', 'user')),
   must_change_password BOOLEAN NOT NULL DEFAULT FALSE,
@@ -22,6 +22,17 @@ CREATE TABLE IF NOT EXISTS users (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 ALTER TABLE users ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN NOT NULL DEFAULT FALSE;
+
+-- Migraatio vanhasta sähköpostipohjaisesta tunnistautumisesta käyttäjätunnukseen
+ALTER TABLE users ADD COLUMN IF NOT EXISTS username VARCHAR(50);
+UPDATE users SET username = LOWER(email) WHERE username IS NULL AND email IS NOT NULL;
+ALTER TABLE users DROP COLUMN IF EXISTS email;
+ALTER TABLE users ALTER COLUMN username SET NOT NULL;
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'users_username_key') THEN
+    ALTER TABLE users ADD CONSTRAINT users_username_key UNIQUE (username);
+  END IF;
+END $$;
 
 -- Pilotit
 CREATE TABLE IF NOT EXISTS pilots (

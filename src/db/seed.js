@@ -5,10 +5,10 @@ async function seed() {
   try {
     const passwordHash = await bcrypt.hash('admin123', 12);
     await pool.query(
-      `INSERT INTO users (name, email, password_hash, role)
+      `INSERT INTO users (name, username, password_hash, role)
        VALUES ($1, $2, $3, $4)
-       ON CONFLICT (email) DO NOTHING`,
-      ['Admin', 'admin@teisko.fi', passwordHash, 'admin']
+       ON CONFLICT (username) DO NOTHING`,
+      ['Admin', 'admin', passwordHash, 'admin']
     );
 
     const vehicles = ['Lada', 'Markon Tojota', 'Extremen Golf'];
@@ -21,7 +21,7 @@ async function seed() {
     }
 
     console.log('Seed-data lisätty onnistuneesti.');
-    console.log('Admin-tunnus: admin@teisko.fi / admin123');
+    console.log('Admin-tunnus: admin / admin123');
   } catch (err) {
     console.error('Seed epäonnistui:', err);
     process.exit(1);

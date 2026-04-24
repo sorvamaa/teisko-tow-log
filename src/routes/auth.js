@@ -20,7 +20,7 @@ router.get('/login', (req, res) => {
 
 router.post('/login',
   loginLimiter,
-  body('email').isEmail().normalizeEmail().withMessage('Virheellinen sähköposti'),
+  body('username').trim().notEmpty().withMessage('Käyttäjätunnus vaaditaan'),
   body('password').notEmpty().withMessage('Salasana vaaditaan'),
   async (req, res) => {
     const errors = validationResult(req);
@@ -32,14 +32,17 @@ router.post('/login',
     }
 
     try {
-      const { email, password } = req.body;
-      const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+      const { username, password } = req.body;
+      const result = await pool.query(
+        'SELECT * FROM users WHERE LOWER(username) = LOWER($1)',
+        [username.trim()]
+      );
       const user = result.rows[0];
 
       if (!user || !(await bcrypt.compare(password, user.password_hash))) {
         return res.render('auth/login', {
           title: 'Kirjaudu sisään',
-          error: 'Virheellinen sähköposti tai salasana.'
+          error: 'Virheellinen käyttäjätunnus tai salasana.'
         });
       }
 

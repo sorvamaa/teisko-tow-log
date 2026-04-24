@@ -12,10 +12,10 @@ function generateTempPassword() {
   return crypto.randomBytes(8).toString('base64').replace(/[+/=]/g, '').slice(0, 10);
 }
 
+const USERS_SELECT = 'SELECT id, name, username, role, must_change_password, created_at FROM users ORDER BY name';
+
 router.get('/', requireAdmin, async (req, res) => {
-  const result = await pool.query(
-    'SELECT id, name, email, role, must_change_password, created_at FROM users ORDER BY name'
-  );
+  const result = await pool.query(USERS_SELECT);
   res.render('admin/users', {
     title: 'Käyttäjät',
     users: result.rows,
@@ -27,13 +27,15 @@ router.get('/', requireAdmin, async (req, res) => {
 router.post('/',
   requireAdmin,
   body('name').trim().notEmpty().withMessage('Nimi vaaditaan'),
-  body('email').isEmail().normalizeEmail().withMessage('Virheellinen sähköposti'),
+  body('username').trim()
+    .isLength({ min: 2, max: 50 }).withMessage('Käyttäjätunnus: 2–50 merkkiä')
+    .matches(/^[a-zA-Z0-9äöåÄÖÅ._-]+$/).withMessage('Käyttäjätunnus: vain kirjaimet, numerot, . _ -'),
   body('password').isLength({ min: 8 }).withMessage('Salasana: vähintään 8 merkkiä'),
   body('role').isIn(['admin', 'user']).withMessage('Virheellinen rooli'),
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      const result = await pool.query('SELECT id, name, email, role, must_change_password, created_at FROM users ORDER BY name');
+      const result = await pool.query(USERS_SELECT);
       return res.render('admin/users', {
         title: 'Käyttäjät',
         users: result.rows,
@@ -42,20 +44,21 @@ router.post('/',
       });
     }
 
-    const { name, email, password, role } = req.body;
+    const { name, password, role } = req.body;
+    const username = req.body.username.trim().toLowerCase();
     const passwordHash = await bcrypt.hash(password, 12);
     try {
       await pool.query(
-        'INSERT INTO users (name, email, password_hash, role, must_change_password) VALUES ($1, $2, $3, $4, TRUE)',
-        [name, email, passwordHash, role]
+        'INSERT INTO users (name, username, password_hash, role, must_change_password) VALUES ($1, $2, $3, $4, TRUE)',
+        [name, username, passwordHash, role]
       );
     } catch (err) {
       if (err.code === '23505') {
-        const result = await pool.query('SELECT id, name, email, role, must_change_password, created_at FROM users ORDER BY name');
+        const result = await pool.query(USERS_SELECT);
         return res.render('admin/users', {
           title: 'Käyttäjät',
           users: result.rows,
-          errors: [{ msg: 'Sähköposti on jo käytössä.' }],
+          errors: [{ msg: 'Käyttäjätunnus on jo käytössä.' }],
           resetResult: null
         });
       }
@@ -91,20 +94,20 @@ router.post('/:id/reset-password', requireAdmin, async (req, res) => {
 
   const result = await pool.query(
     `UPDATE users SET password_hash = $1, must_change_password = TRUE, updated_at = NOW()
-     WHERE id = $2 RETURNING name, email`,
+     WHERE id = $2 RETURNING name, username`,
     [passwordHash, userId]
   );
 
   if (!result.rows[0]) return res.redirect('/admin/users');
 
-  const users = await pool.query('SELECT id, name, email, role, must_change_password, created_at FROM users ORDER BY name');
+  const users = await pool.query(USERS_SELECT);
   res.render('admin/users', {
     title: 'Käyttäjät',
     users: users.rows,
     errors: null,
     resetResult: {
       userName: result.rows[0].name,
-      userEmail: result.rows[0].email,
+      username: result.rows[0].username,
       tempPassword
     }
   });
