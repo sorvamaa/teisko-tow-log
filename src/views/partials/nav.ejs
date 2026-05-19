@@ -1,7 +1,7 @@
 <nav class="navbar">
   <a href="/" class="nav-brand">Teisko Tow Log</a>
   <% if (user) { %>
-    <button class="nav-toggle" onclick="this.parentElement.classList.toggle('nav-open')" aria-label="Valikko">&#9776;</button>
+    <button class="nav-toggle" type="button" aria-label="Valikko">&#9776;</button>
     <div class="nav-links">
       <% if (user.role === 'admin') { %>
         <a href="/flight-days">Lentopäivät</a>
