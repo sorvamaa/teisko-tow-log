@@ -23,10 +23,18 @@ CREATE TABLE IF NOT EXISTS users (
 );
 ALTER TABLE users ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN NOT NULL DEFAULT FALSE;
 
--- Migraatio vanhasta sähköpostipohjaisesta tunnistautumisesta käyttäjätunnukseen
+-- Migraatio vanhasta sähköpostipohjaisesta tunnistautumisesta käyttäjätunnukseen.
+-- Idempotentti: email-riippuvat lauseet ajetaan vain jos email-sarake on yhä olemassa.
 ALTER TABLE users ADD COLUMN IF NOT EXISTS username VARCHAR(50);
-UPDATE users SET username = LOWER(email) WHERE username IS NULL AND email IS NOT NULL;
-ALTER TABLE users DROP COLUMN IF EXISTS email;
+DO $$ BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'users' AND column_name = 'email'
+  ) THEN
+    UPDATE users SET username = LOWER(email) WHERE username IS NULL AND email IS NOT NULL;
+    ALTER TABLE users DROP COLUMN email;
+  END IF;
+END $$;
 ALTER TABLE users ALTER COLUMN username SET NOT NULL;
 DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'users_username_key') THEN
