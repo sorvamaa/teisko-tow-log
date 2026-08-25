@@ -51,25 +51,58 @@
   </div>
 
   <h2>Maksuhistoria</h2>
+  <p class="text-muted">Muokkaa kentt&auml;&auml; ja paina Tallenna. Poista poistaa maksun lopullisesti.</p>
   <% if (payments.length === 0) { %>
     <p class="empty-state">Ei maksuja.</p>
   <% } else { %>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Pvm</th><th>Pilotti</th><th>Tyyppi</th><th>Maksutapa</th><th>Huomautus</th></tr></thead>
+        <thead><tr><th>Pvm</th><th>Pilotti</th><th>Tyyppi</th><th>Maksutapa</th><th>Huomautus</th><th>Toiminnot</th></tr></thead>
         <tbody>
           <% payments.forEach(p => { %>
             <tr>
-              <td><%= new Date(p.date).toLocaleDateString('fi-FI') %></td>
-              <td><%= p.pilot_name %></td>
-              <td><%= p.type === 'daily' ? 'Päivämaksu 10 €' : 'Kausikortti 50 €' %></td>
-              <td><%= p.payment_method %></td>
-              <td><%= p.note || '' %></td>
+              <td><input type="date" name="date" form="payment-<%= p.id %>" value="<%= p.date_str %>" class="input-table" required></td>
+              <td>
+                <select name="pilot_id" form="payment-<%= p.id %>" class="input-table" required>
+                  <% allPilots.forEach(pi => { %>
+                    <option value="<%= pi.id %>" <%= pi.id === p.pilot_id ? 'selected' : '' %>><%= pi.name %></option>
+                  <% }) %>
+                </select>
+              </td>
+              <td>
+                <select name="type" form="payment-<%= p.id %>" class="input-table" required>
+                  <option value="daily" <%= p.type === 'daily' ? 'selected' : '' %>>Päivämaksu 10 &euro;</option>
+                  <option value="season" <%= p.type === 'season' ? 'selected' : '' %>>Kausikortti 50 &euro;</option>
+                </select>
+              </td>
+              <td>
+                <select name="payment_method" form="payment-<%= p.id %>" class="input-table" required>
+                  <% ['MobilePay', 'Käteinen', 'Tilisiirto'].forEach(m => { %>
+                    <option value="<%= m %>" <%= p.payment_method === m ? 'selected' : '' %>><%= m %></option>
+                  <% }) %>
+                  <% if (!['MobilePay', 'Käteinen', 'Tilisiirto'].includes(p.payment_method)) { %>
+                    <option value="<%= p.payment_method %>" selected><%= p.payment_method %></option>
+                  <% } %>
+                </select>
+              </td>
+              <td><input type="text" name="note" form="payment-<%= p.id %>" value="<%= p.note || '' %>" class="input-table"></td>
+              <td>
+                <div class="btn-group">
+                  <button type="submit" form="payment-<%= p.id %>" class="btn btn-small">Tallenna</button>
+                  <button type="submit" form="payment-delete-<%= p.id %>" class="btn btn-small btn-danger">Poista</button>
+                </div>
+              </td>
             </tr>
           <% }) %>
         </tbody>
       </table>
     </div>
+
+    <% payments.forEach(p => { %>
+      <form id="payment-<%= p.id %>" method="POST" action="/admin/payments/<%= p.id %>"></form>
+      <form id="payment-delete-<%= p.id %>" method="POST" action="/admin/payments/<%= p.id %>/delete"
+            data-confirm="Poistetaanko maksu: <%= p.pilot_name %>, <%= p.type === 'season' ? 'kausikortti 50 €' : 'päivämaksu 10 €' %>? Tätä ei voi perua."></form>
+    <% }) %>
   <% } %>
 </div>
 
