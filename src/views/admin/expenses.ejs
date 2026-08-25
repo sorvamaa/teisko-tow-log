@@ -39,25 +39,38 @@
   </div>
 
   <h2>Kuluhistoria</h2>
+  <p class="text-muted">Muokkaa kentt&auml;&auml; ja paina Tallenna. Poista poistaa kulun lopullisesti.</p>
   <% if (expenses.length === 0) { %>
     <p class="empty-state">Ei kuluja.</p>
   <% } else { %>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Pvm</th><th>Summa</th><th>Hankkija</th><th>Kuvaus</th><th>Huomautus</th></tr></thead>
+        <thead><tr><th>Pvm</th><th>Summa</th><th>Hankkija</th><th>Kuvaus</th><th>Huomautus</th><th>Toiminnot</th></tr></thead>
         <tbody>
           <% expenses.forEach(e => { %>
             <tr>
-              <td><%= new Date(e.date).toLocaleDateString('fi-FI') %></td>
-              <td><%= parseFloat(e.amount).toFixed(2) %> &euro;</td>
-              <td><%= e.purchased_by %></td>
-              <td><%= e.description %></td>
-              <td><%= e.note || '' %></td>
+              <td><input type="date" name="date" form="expense-<%= e.id %>" value="<%= e.date_str %>" class="input-table" required></td>
+              <td><input type="number" name="amount" form="expense-<%= e.id %>" value="<%= parseFloat(e.amount).toFixed(2) %>" step="0.01" min="0" class="input-table" required></td>
+              <td><input type="text" name="purchased_by" form="expense-<%= e.id %>" value="<%= e.purchased_by %>" class="input-table" required></td>
+              <td><input type="text" name="description" form="expense-<%= e.id %>" value="<%= e.description %>" class="input-table" required></td>
+              <td><input type="text" name="note" form="expense-<%= e.id %>" value="<%= e.note || '' %>" class="input-table"></td>
+              <td>
+                <div class="btn-group">
+                  <button type="submit" form="expense-<%= e.id %>" class="btn btn-small">Tallenna</button>
+                  <button type="submit" form="expense-delete-<%= e.id %>" class="btn btn-small btn-danger">Poista</button>
+                </div>
+              </td>
             </tr>
           <% }) %>
         </tbody>
       </table>
     </div>
+
+    <% expenses.forEach(e => { %>
+      <form id="expense-<%= e.id %>" method="POST" action="/admin/expenses/<%= e.id %>"></form>
+      <form id="expense-delete-<%= e.id %>" method="POST" action="/admin/expenses/<%= e.id %>/delete"
+            data-confirm="Poistetaanko kulu &quot;<%= e.description %>&quot; (<%= parseFloat(e.amount).toFixed(2) %> €)? Tätä ei voi perua."></form>
+    <% }) %>
   <% } %>
 </div>
 
