@@ -1,0 +1,92 @@
+<%- include('../partials/header') %>
+
+<% const fmt = s => s ? s.split('-').reverse().map(Number).join('.') : ''; %>
+<% const typeLabel = { daily: 'Päivämaksut', season: 'Kausikortit', per_tow: 'Hinausmaksut (per hinaus)' }; %>
+<% const money = n => n.toFixed(2).replace('.', ',') + ' €'; %>
+
+<div class="page report-page">
+  <div class="page-header">
+    <h1><%= season.name %></h1>
+    <div class="btn-group no-print">
+      <a href="/admin/balances?season=<%= season.id %>" class="btn">Maksutilanne</a>
+      <button type="button" class="btn" id="print-btn">Tulosta / PDF</button>
+    </div>
+  </div>
+  <p class="text-muted">
+    <%= fmt(season.start_str) %> – <%= season.end_str ? fmt(season.end_str) : 'auki' %>
+    · <%= season.end_date ? 'suljettu' : 'avoin kausi' %>
+    · raportti laskettu <%= new Date().toLocaleDateString('fi-FI') %>
+  </p>
+
+  <div class="summary-grid">
+    <div class="summary-card"><div class="summary-label">Lentopäiviä</div><div class="summary-value"><%= stats.days %></div></div>
+    <div class="summary-card"><div class="summary-label">Hinauksia</div><div class="summary-value"><%= stats.tows %></div></div>
+    <div class="summary-card"><div class="summary-label">Tulot</div><div class="summary-value text-success"><%= money(totalIncome) %></div></div>
+    <div class="summary-card"><div class="summary-label">Kulut</div><div class="summary-value text-danger"><%= money(totalExpenses) %></div></div>
+    <div class="summary-card"><div class="summary-label">Tulos</div><div class="summary-value <%= totalIncome - totalExpenses >= 0 ? 'text-success' : 'text-danger' %>"><%= money(totalIncome - totalExpenses) %></div></div>
+    <div class="summary-card"><div class="summary-label">Avoimet maksut</div><div class="summary-value <%= balances.totalOwed > 0 ? 'text-danger' : '' %>"><%= money(balances.totalOwed) %></div></div>
+  </div>
+
+  <div class="detail-section">
+    <h2>Hinaukset ajoneuvoittain</h2>
+    <% if (!vehicles.length) { %><p class="text-muted">Ei hinauksia.</p><% } else { %>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Ajoneuvo</th><th>Hinauksia</th></tr></thead>
+        <tbody><% vehicles.forEach(v => { %><tr><td><%= v.name %></td><td><%= v.tows %></td></tr><% }) %></tbody>
+      </table></div>
+    <% } %>
+  </div>
+
+  <div class="detail-section">
+    <h2>Tulot</h2>
+    <% if (!income.length) { %><p class="text-muted">Ei maksuja.</p><% } else { %>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Tyyppi</th><th>Kpl</th><th>Yhteensä</th></tr></thead>
+        <tbody>
+          <% income.forEach(i => { %><tr><td><%= typeLabel[i.type] || i.type %></td><td><%= i.count %></td><td><%= money(parseFloat(i.total)) %></td></tr><% }) %>
+          <tr class="table-total"><td><strong>Yhteensä</strong></td><td></td><td><strong><%= money(totalIncome) %></strong></td></tr>
+        </tbody>
+      </table></div>
+    <% } %>
+  </div>
+
+  <div class="detail-section">
+    <h2>Kulut</h2>
+    <% if (!expenses.length) { %><p class="text-muted">Ei kuluja.</p><% } else { %>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Pvm</th><th>Summa</th><th>Hankkija</th><th>Kuvaus</th></tr></thead>
+        <tbody>
+          <% expenses.forEach(e => { %><tr><td><%= fmt(e.date) %></td><td><%= money(parseFloat(e.amount)) %></td><td><%= e.purchased_by %></td><td><%= e.description %></td></tr><% }) %>
+          <tr class="table-total"><td><strong>Yhteensä</strong></td><td><strong><%= money(totalExpenses) %></strong></td><td></td><td></td></tr>
+        </tbody>
+      </table></div>
+    <% } %>
+  </div>
+
+  <div class="detail-section">
+    <h2>Avoimet maksut</h2>
+    <% const owing = balances.rows.filter(r => r.status === 'owes'); %>
+    <% if (!owing.length) { %><p class="text-success">Kaikki kauden maksut on maksettu.</p><% } else { %>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Pilotti</th><th>Peruste</th><th>Puuttuu</th></tr></thead>
+        <tbody>
+          <% owing.forEach(r => { %>
+            <tr>
+              <td><%= r.name %></td>
+              <td><%= r.billingType === 'per_tow' ? r.tows + ' hinausta' : r.unpaidDays + ' päivää' %></td>
+              <td><%= money(r.owed) %><%= r.suggestSeasonPass ? ' (tai kausikortti ' + money(balances.priceSeason) + ')' : '' %></td>
+            </tr>
+          <% }) %>
+          <tr class="table-total"><td><strong>Yhteensä</strong></td><td></td><td><strong><%= money(balances.totalOwed) %></strong></td></tr>
+        </tbody>
+      </table></div>
+    <% } %>
+    <% const exempt = balances.rows.filter(r => r.exempt); %>
+    <% if (exempt.length) { %>
+      <p class="text-muted">Maksuvapaat: <%= exempt.map(r => r.name + (r.exemptReason ? ' (' + r.exemptReason + ')' : '')).join(', ') %></p>
+    <% } %>
+  </div>
+</div>
+
+<script src="/js/report.js"></script>
+<%- include('../partials/footer') %>

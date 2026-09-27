@@ -2,6 +2,13 @@ const express = require('express');
 const { body, validationResult } = require('express-validator');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
 const pool = require('../db/pool');
+const { flightDayDateError } = require('../db/seasons');
+
+// Per hinaus -laskutettavien pilottien hinausmäärät lomakkeelta (pilot_tows_<id>)
+function pilotTowCount(body, pilotId) {
+  const v = parseInt(body[`pilot_tows_${pilotId}`], 10);
+  return Number.isNaN(v) || v < 0 ? null : v;
+}
 
 const router = express.Router();
 
@@ -49,8 +56,12 @@ router.post('/',
   requireAuth,
   body('date').isDate().withMessage('Päivämäärä vaaditaan'),
   async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
+    const errors = validationResult(req).array();
+    if (!errors.length) {
+      const seasonError = await flightDayDateError(req.body.date);
+      if (seasonError) errors.push({ msg: seasonError });
+    }
+    if (errors.length) {
       const isAdmin = req.session.userRole === 'admin';
       const vehiclesQuery = isAdmin
         ? 'SELECT * FROM vehicles WHERE active = true ORDER BY name'
@@ -64,7 +75,7 @@ router.post('/',
         flightDay: req.body,
         vehicles: vehicles.rows,
         pilots: pilots.rows,
-        errors: errors.array(),
+        errors,
         isAdmin
       });
     }
@@ -108,8 +119,8 @@ router.post('/',
 
       for (const pid of pilotIds) {
         await client.query(
-          'INSERT INTO flight_day_pilots (flight_day_id, pilot_id) VALUES ($1, $2)',
-          [flightDayId, parseInt(pid)]
+          'INSERT INTO flight_day_pilots (flight_day_id, pilot_id, tow_count) VALUES ($1, $2, $3)',
+          [flightDayId, parseInt(pid), pilotTowCount(req.body, pid)]
         );
       }
 
@@ -140,7 +151,7 @@ router.get('/:id', requireAuth, async (req, res) => {
        WHERE fdv.flight_day_id = $1`, [id]
     ),
     pool.query(
-      `SELECT p.name, p.note
+      `SELECT p.name, p.note, p.billing_type, fdp.tow_count
        FROM flight_day_pilots fdp
        JOIN pilots p ON fdp.pilot_id = p.id
        WHERE fdp.flight_day_id = $1
@@ -179,7 +190,7 @@ router.get('/:id/edit', requireAuth, async (req, res) => {
     pool.query(vehiclesQuery),
     pool.query('SELECT * FROM pilots WHERE active = true ORDER BY name'),
     pool.query('SELECT vehicle_id, tow_count FROM flight_day_vehicles WHERE flight_day_id = $1', [id]),
-    pool.query('SELECT pilot_id FROM flight_day_pilots WHERE flight_day_id = $1', [id])
+    pool.query('SELECT pilot_id, tow_count FROM flight_day_pilots WHERE flight_day_id = $1', [id])
   ]);
 
   if (!fd.rows[0]) {
@@ -197,6 +208,13 @@ router.get('/:id/edit', requireAuth, async (req, res) => {
   flightDay.vehicleMap = {};
   fdVehicles.rows.forEach(v => { flightDay.vehicleMap[String(v.vehicle_id)] = v.tow_count; });
   flightDay.pilotIds = fdPilots.rows.map(p => p.pilot_id);
+  flightDay.pilotTows = {};
+  fdPilots.rows.forEach(p => { if (p.tow_count !== null) flightDay.pilotTows[String(p.pilot_id)] = p.tow_count; });
+  const fdDateStr = new Date(flightDay.date).toISOString().split('T')[0];
+  const seasonError = await flightDayDateError(fdDateStr);
+  if (seasonError) {
+    return res.status(403).render('error', { title: 'Kausi suljettu', message: seasonError });
+  }
 
   res.render('flight-days/form', {
     title: 'Muokkaa lentopäivää',
@@ -213,6 +231,19 @@ router.post('/:id',
   body('date').isDate().withMessage('Päivämäärä vaaditaan'),
   async (req, res) => {
     const id = parseInt(req.params.id);
+
+    const validation = validationResult(req);
+    if (!validation.isEmpty()) {
+      return res.redirect(`/flight-days/${id}/edit`);
+    }
+    const current = await pool.query(`SELECT to_char(date, 'YYYY-MM-DD') AS d FROM flight_days WHERE id = $1`, [id]);
+    if (!current.rows[0]) {
+      return res.status(404).render('error', { title: '404', message: 'Lentopäivää ei löytynyt.' });
+    }
+    const seasonError = (await flightDayDateError(current.rows[0].d)) || (await flightDayDateError(req.body.date));
+    if (seasonError) {
+      return res.status(403).render('error', { title: 'Kausi suljettu', message: seasonError });
+    }
 
     // User voi päivittää vain tänään kirjatun lentopäivän
     if (req.session.userRole !== 'admin') {
@@ -284,8 +315,8 @@ router.post('/:id',
 
       for (const pid of pilotIds) {
         await client.query(
-          'INSERT INTO flight_day_pilots (flight_day_id, pilot_id) VALUES ($1, $2)',
-          [id, parseInt(pid)]
+          'INSERT INTO flight_day_pilots (flight_day_id, pilot_id, tow_count) VALUES ($1, $2, $3)',
+          [id, parseInt(pid), pilotTowCount(req.body, pid)]
         );
       }
 
@@ -302,6 +333,11 @@ router.post('/:id',
 );
 
 router.post('/:id/delete', requireAdmin, async (req, res) => {
+  const current = await pool.query(`SELECT to_char(date, 'YYYY-MM-DD') AS d FROM flight_days WHERE id = $1`, [parseInt(req.params.id)]);
+  if (current.rows[0]) {
+    const seasonError = await flightDayDateError(current.rows[0].d);
+    if (seasonError) return res.status(403).render('error', { title: 'Kausi suljettu', message: seasonError });
+  }
   await pool.query('DELETE FROM flight_days WHERE id = $1', [parseInt(req.params.id)]);
   res.redirect('/flight-days');
 });

@@ -55,6 +55,8 @@ app.use('/admin/payments', require('./routes/admin/payments'));
 app.use('/admin/expenses', require('./routes/admin/expenses'));
 app.use('/admin/summary', require('./routes/admin/summary'));
 app.use('/admin/users', require('./routes/admin/users'));
+app.use('/admin/seasons', require('./routes/admin/seasons'));
+app.use('/admin/balances', require('./routes/admin/balances'));
 
 app.use((req, res) => {
   res.status(404).render('error', { title: '404', message: 'Sivua ei löytynyt.' });

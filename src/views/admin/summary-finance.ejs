@@ -38,7 +38,7 @@
         <tbody>
           <% paymentsByType.forEach(p => { %>
             <tr>
-              <td><%= p.type === 'daily' ? 'Päivämaksu (10 €)' : 'Kausikortti (50 €)' %></td>
+              <td><%= { daily: 'Päivämaksut', season: 'Kausikortit', per_tow: 'Hinausmaksut (per hinaus)' }[p.type] || p.type %></td>
               <td><%= p.count %></td>
               <td><%= parseFloat(p.total).toFixed(2) %> &euro;</td>
             </tr>

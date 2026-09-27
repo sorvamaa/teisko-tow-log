@@ -1,0 +1,66 @@
+<%- include('../partials/header') %>
+
+<div class="page">
+  <div class="page-header">
+    <h1>Kaudet</h1>
+    <% if (seasons.some(s => !s.end_date)) { %>
+      <div class="btn-group">
+        <a href="/admin/seasons/close" class="btn btn-warning">Päätä kausi</a>
+      </div>
+    <% } %>
+  </div>
+
+  <% if (notice) { %><div class="alert alert-success"><p><%= notice %></p></div><% } %>
+  <% if (errors) { %>
+    <div class="alert alert-error"><% errors.forEach(e => { %><p><%= e.msg %></p><% }) %></div>
+  <% } %>
+
+  <p class="text-muted">
+    Lentopäivä kuuluu kaudelle päivämääränsä perusteella. Suljetulle kaudelle ei voi kirjata lentopäiviä,
+    mutta sille voi yhä kirjata myöhässä tulleita maksuja.
+  </p>
+
+  <% const fmt = s => s ? s.split('-').reverse().map(Number).join('.') : ''; %>
+  <% seasons.forEach(s => { %>
+    <div class="card" style="margin-bottom: 1rem">
+      <div class="page-header">
+        <h2><%= s.name %> <span class="badge <%= s.end_date ? 'badge-secondary' : '' %>"><%= s.end_date ? 'suljettu' : 'avoin' %></span></h2>
+        <div class="btn-group">
+          <a href="/admin/balances?season=<%= s.id %>" class="btn btn-small">Maksutilanne</a>
+          <a href="/admin/seasons/<%= s.id %>/report" class="btn btn-small">Kausiraportti</a>
+        </div>
+      </div>
+      <p class="text-muted"><%= fmt(s.start_str) %> – <%= s.end_str ? fmt(s.end_str) : 'auki' %></p>
+
+      <form method="POST" action="/admin/seasons/<%= s.id %>" class="form">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Nimi</label>
+            <input type="text" name="name" value="<%= s.name %>" required>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Päivämaksu (€)</label>
+            <input type="number" name="price_daily" step="0.01" min="0" value="<%= parseFloat(s.price_daily) %>" required>
+          </div>
+          <div class="form-group">
+            <label>Kausikortti (€)</label>
+            <input type="number" name="price_season" step="0.01" min="0" value="<%= parseFloat(s.price_season) %>" required>
+          </div>
+          <div class="form-group">
+            <label>Hinaus, per hinaus -asiakkaat (€)</label>
+            <input type="number" name="price_per_tow" step="0.01" min="0" value="<%= parseFloat(s.price_per_tow) %>" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Maksuohje viesteihin</label>
+          <textarea name="payment_instructions" rows="2" placeholder="esim. Maksu MobilePaylla numeroon ..."><%= s.payment_instructions || '' %></textarea>
+        </div>
+        <button type="submit" class="btn">Tallenna</button>
+      </form>
+    </div>
+  <% }) %>
+</div>
+
+<%- include('../partials/footer') %>

@@ -39,7 +39,7 @@
     <% } else { %>
       <div class="pilot-list">
         <% pilots.forEach(p => { %>
-          <span class="pilot-tag"><%= p.name %><% if (p.note) { %> <span class="text-muted">(<%= p.note %>)</span><% } %></span>
+          <span class="pilot-tag"><%= p.name %><% if (p.note) { %> <span class="text-muted">(<%= p.note %>)</span><% } %><% if (p.billing_type === 'per_tow' && p.tow_count !== null) { %> · <%= p.tow_count %> hinausta<% } %></span>
         <% }) %>
       </div>
     <% } %>

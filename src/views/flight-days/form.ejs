@@ -56,6 +56,12 @@
               <%= pIds.includes(String(p.id)) ? 'checked' : '' %>>
             <span class="pilot-option-name"><%= p.name %></span>
             <% if (p.note) { %><span class="text-muted">(<%= p.note %>)</span><% } %>
+            <% if (p.billing_type === 'per_tow') { %>
+              <% const pTows = flightDay && flightDay.pilotTows ? flightDay.pilotTows[String(p.id)] : undefined; %>
+              <input type="number" name="pilot_tows_<%= p.id %>" class="pilot-tow-input" min="0"
+                placeholder="hinauksia" aria-label="Hinauksia: <%= p.name %>" value="<%= pTows !== undefined ? pTows : '' %>"
+                <%= pIds.includes(String(p.id)) ? '' : 'hidden' %>>
+            <% } %>
           </label>
         <% }) %>
       </div>

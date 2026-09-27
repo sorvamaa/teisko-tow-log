@@ -110,6 +110,61 @@ CREATE TABLE IF NOT EXISTS expenses (
   recorded_by INTEGER REFERENCES users(id),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Kaudet (v1.1)
+CREATE TABLE IF NOT EXISTS seasons (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  start_date DATE NOT NULL,
+  end_date DATE,
+  price_daily NUMERIC(10,2) NOT NULL DEFAULT 10,
+  price_season NUMERIC(10,2) NOT NULL DEFAULT 50,
+  price_per_tow NUMERIC(10,2) NOT NULL DEFAULT 5,
+  payment_instructions TEXT,
+  closed_at TIMESTAMP WITH TIME ZONE,
+  closed_by INTEGER REFERENCES users(id),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS one_open_season ON seasons ((end_date IS NULL)) WHERE end_date IS NULL;
+
+-- Ensimmäinen kausi: kalenterivuosi, jolta vanhin kirjaus on (tai kuluva vuosi)
+INSERT INTO seasons (name, start_date)
+SELECT 'Kausi ' || y, make_date(y, 1, 1)
+FROM (
+  SELECT COALESCE(
+    EXTRACT(YEAR FROM LEAST(
+      (SELECT MIN(date) FROM flight_days),
+      (SELECT MIN(date) FROM payments)
+    ))::int,
+    EXTRACT(YEAR FROM CURRENT_DATE)::int
+  ) AS y
+) s
+WHERE NOT EXISTS (SELECT 1 FROM seasons);
+
+CREATE TABLE IF NOT EXISTS season_exemptions (
+  season_id INTEGER NOT NULL REFERENCES seasons(id) ON DELETE CASCADE,
+  pilot_id INTEGER NOT NULL REFERENCES pilots(id),
+  reason VARCHAR(255),
+  PRIMARY KEY (season_id, pilot_id)
+);
+
+ALTER TABLE payments ADD COLUMN IF NOT EXISTS season_id INTEGER REFERENCES seasons(id);
+UPDATE payments p SET season_id = (
+  SELECT s.id FROM seasons s
+  WHERE p.date >= s.start_date AND (s.end_date IS NULL OR p.date <= s.end_date)
+  ORDER BY s.start_date LIMIT 1
+) WHERE season_id IS NULL;
+UPDATE payments SET season_id = (SELECT id FROM seasons ORDER BY start_date LIMIT 1) WHERE season_id IS NULL;
+ALTER TABLE payments ALTER COLUMN season_id SET NOT NULL;
+
+ALTER TABLE payments DROP CONSTRAINT IF EXISTS payments_type_check;
+ALTER TABLE payments ADD CONSTRAINT payments_type_check CHECK (type IN ('daily', 'season', 'per_tow'));
+
+ALTER TABLE pilots ADD COLUMN IF NOT EXISTS billing_type VARCHAR(20) NOT NULL DEFAULT 'normal';
+ALTER TABLE pilots DROP CONSTRAINT IF EXISTS pilots_billing_type_check;
+ALTER TABLE pilots ADD CONSTRAINT pilots_billing_type_check CHECK (billing_type IN ('normal', 'per_tow'));
+
+ALTER TABLE flight_day_pilots ADD COLUMN IF NOT EXISTS tow_count INTEGER;
 `;
 
 async function migrate() {

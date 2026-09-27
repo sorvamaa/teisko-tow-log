@@ -1,0 +1,156 @@
+<%- include('../partials/header') %>
+
+<div class="page">
+  <div class="page-header">
+    <h1>Maksutilanne</h1>
+    <div class="btn-group">
+      <a href="/admin/seasons/<%= season.id %>/report" class="btn">Kausiraportti</a>
+    </div>
+  </div>
+
+  <form method="GET" action="/admin/balances" class="form form-inline" style="margin-bottom: 1rem">
+    <div class="form-group">
+      <label for="season">Kausi</label>
+      <select id="season" name="season" class="auto-submit">
+        <% seasons.forEach(s => { %>
+          <option value="<%= s.id %>" <%= s.id === season.id ? 'selected' : '' %>><%= s.name %><%= s.end_date ? ' (suljettu)' : ' (avoin)' %></option>
+        <% }) %>
+      </select>
+    </div>
+    <noscript><button type="submit" class="btn">Näytä</button></noscript>
+  </form>
+
+  <p class="text-muted">
+    Hinnat: päivämaksu <%= eur(balances.priceDaily) %>, kausikortti <%= eur(balances.priceSeason) %>, hinaus <%= eur(balances.pricePerTow) %>.
+    Kausikortti kattaa kaikki kauden lentopäivät.
+  </p>
+
+  <div class="summary-grid">
+    <div class="summary-card">
+      <div class="summary-label">Avoinna yhteensä</div>
+      <div class="summary-value <%= balances.totalOwed > 0 ? 'text-danger' : 'text-success' %>"><%= eur(balances.totalOwed) %></div>
+    </div>
+    <% if (balances.totalOwedWithPasses !== balances.totalOwed) { %>
+      <div class="summary-card">
+        <div class="summary-label">Jos ehdotetut kausikortit ostetaan</div>
+        <div class="summary-value"><%= eur(balances.totalOwedWithPasses) %></div>
+      </div>
+    <% } %>
+    <div class="summary-card">
+      <div class="summary-label">Maksamatta</div>
+      <div class="summary-value"><%= balances.rows.filter(r => r.status === 'owes').length %> kpl</div>
+    </div>
+  </div>
+
+  <% const owing = balances.rows.filter(r => r.status === 'owes'); %>
+  <% if (owing.length > 0) { %>
+    <div class="btn-group" style="margin: 1rem 0">
+      <button type="button" class="btn btn-primary" data-copy="copy-summary">Kopioi koko lista</button>
+    </div>
+    <textarea id="copy-summary" class="copy-source" readonly><%= summary %></textarea>
+  <% } %>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Pilotti</th><th>Puuttuu</th><th class="hide-mobile">Lentopäiviä</th><th class="hide-mobile">Maksut</th><th class="hide-mobile">Tila</th><th></th></tr>
+      </thead>
+      <tbody>
+        <% balances.rows.filter(r => r.status !== 'no_flights').forEach(r => { %>
+          <tr class="<%= r.status === 'exempt' ? 'row-inactive' : '' %>">
+            <td>
+              <details>
+                <summary><strong><%= r.name %></strong></summary>
+                <div class="text-muted balance-details">
+                  <% if (r.billingType === 'per_tow') { %>
+                    Laskutus per hinaus: <%= r.tows %> hinausta × <%= eur(balances.pricePerTow) %> = <%= eur(r.due) %><br>
+                  <% } %>
+                  <span class="show-mobile">Tila: <%= r.status === 'owes' ? 'puuttuu' : r.status === 'exempt' ? 'maksuvapaa' : 'maksettu' %><br></span>
+                  Lentopäivät (<%= r.days %>): <%= r.dateLabels.length ? r.dateLabels.join(', ') : '–' %>
+                  <% if (r.exemptReason) { %><br>Maksuvapaa: <%= r.exemptReason %><% } %>
+                </div>
+              </details>
+            </td>
+            <td>
+              <% if (r.owed > 0) { %>
+                <strong class="text-danger"><%= eur(r.owed) %></strong>
+                <% if (r.suggestSeasonPass) { %><br><span class="text-muted">tai kausikortti <%= eur(balances.priceSeason) %></span><% } %>
+              <% } else { %>–<% } %>
+            </td>
+            <td class="hide-mobile"><%= r.days %><% if (r.billingType === 'per_tow') { %> <span class="text-muted">(<%= r.tows %> hin.)</span><% } %></td>
+            <td class="hide-mobile">
+              <% if (r.seasonPass) { %>Kausikortti<% } %>
+              <% if (r.dailyCount) { %><%= r.seasonPass ? ', ' : '' %><%= r.dailyCount %> × päivä<% } %>
+              <% if (r.perTowPaid) { %><%= eur(r.perTowPaid) %><% } %>
+              <% if (!r.seasonPass && !r.dailyCount && !r.perTowPaid) { %><span class="text-muted">–</span><% } %>
+            </td>
+
+            <td class="hide-mobile">
+              <% if (r.status === 'owes') { %><span class="status-dot status-no">Puuttuu</span>
+              <% } else if (r.status === 'exempt') { %><span class="status-dot status-warning">Vapaa</span>
+              <% } else { %><span class="status-dot status-ok">Maksettu</span><% } %>
+            </td>
+            <td>
+              <div class="btn-group balance-actions">
+                <% if (r.message) { %>
+                  <button type="button" class="btn btn-small" data-copy="msg-<%= r.pilotId %>">Kopioi viesti</button>
+                  <textarea id="msg-<%= r.pilotId %>" class="copy-source" readonly><%= r.message %></textarea>
+                <% } %>
+                <% if (r.exempt) { %>
+                  <form method="POST" action="/admin/balances/unexempt" class="inline">
+                    <input type="hidden" name="season_id" value="<%= season.id %>">
+                    <input type="hidden" name="pilot_id" value="<%= r.pilotId %>">
+                    <button type="submit" class="btn btn-small">Poista vapautus</button>
+                  </form>
+                <% } else if (r.status === 'owes') { %>
+                  <form method="POST" action="/admin/balances/exempt" class="inline"
+                        data-confirm="Merkitäänkö <%= r.name %> maksuvapaaksi kaudella <%= season.name %>?">
+                    <input type="hidden" name="season_id" value="<%= season.id %>">
+                    <input type="hidden" name="pilot_id" value="<%= r.pilotId %>">
+                    <button type="submit" class="btn btn-small">Maksuvapaaksi</button>
+                  </form>
+                <% } %>
+              </div>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+
+  <% const noFlights = balances.rows.filter(r => r.status === 'no_flights'); %>
+  <% if (noFlights.length) { %>
+    <div class="detail-section">
+      <h2>Maksaneet ilman lentopäiviä</h2>
+      <p class="text-muted">Maksu on kirjattu, mutta pilottia ei ole merkitty millekään kauden lentopäivälle. Tarkista puuttuuko kirjaus.</p>
+      <ul>
+        <% noFlights.forEach(r => { %>
+          <li><%= r.name %> – <%= r.seasonPass ? 'kausikortti' : '' %><%= r.dailyCount ? r.dailyCount + ' × päivämaksu' : '' %><%= r.perTowPaid ? eur(r.perTowPaid) : '' %></li>
+        <% }) %>
+      </ul>
+    </div>
+  <% } %>
+
+  <div class="card" style="margin-top: 1.5rem">
+    <h2>Lisää maksuvapaa pilotti</h2>
+    <p class="text-muted">Esim. hinaajat ja kouluttajat. Maksuvapaus koskee vain kautta <%= season.name %>.</p>
+    <form method="POST" action="/admin/balances/exempt" class="form form-inline">
+      <input type="hidden" name="season_id" value="<%= season.id %>">
+      <div class="form-group">
+        <label for="exempt_pilot">Pilotti</label>
+        <select id="exempt_pilot" name="pilot_id" required>
+          <option value="">Valitse...</option>
+          <% pilots.forEach(p => { %><option value="<%= p.id %>"><%= p.name %></option><% }) %>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="reason">Syy</label>
+        <input type="text" id="reason" name="reason" placeholder="esim. hinaaja">
+      </div>
+      <button type="submit" class="btn btn-primary">Lisää</button>
+    </form>
+  </div>
+</div>
+
+<script src="/js/copy.js"></script>
+<%- include('../partials/footer') %>

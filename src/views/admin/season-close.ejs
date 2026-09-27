@@ -1,0 +1,51 @@
+<%- include('../partials/header') %>
+
+<div class="page">
+  <h1>Päätä kausi: <%= season.name %></h1>
+
+  <% if (errors) { %>
+    <div class="alert alert-error"><% errors.forEach(e => { %><p><%= e.msg %></p><% }) %></div>
+  <% } %>
+
+  <div class="alert alert-info">
+    <p>Kun kausi päätetään:</p>
+    <ul>
+      <li><%= season.name %> suljetaan, eikä sille voi enää kirjata tai muokata lentopäiviä.</li>
+      <li>Kaudelle voi yhä kirjata myöhässä tulleita maksuja, ja sen raportti jää historiaan.</li>
+      <li>Uusi kausi alkaa loppupäivää seuraavana päivänä samoilla hinnoilla. Hintoja voi muuttaa Kaudet-sivulla.</li>
+    </ul>
+  </div>
+
+  <div class="summary-grid">
+    <div class="summary-card">
+      <div class="summary-label">Avoimet maksut</div>
+      <div class="summary-value <%= balances.totalOwed > 0 ? 'text-danger' : 'text-success' %>"><%= balances.totalOwed.toFixed(2) %> &euro;</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-label">Maksamatta</div>
+      <div class="summary-value"><%= balances.rows.filter(r => r.status === 'owes').length %> pilottia</div>
+    </div>
+  </div>
+  <p><a href="/admin/balances?season=<%= season.id %>">Näytä maksutilanne</a></p>
+
+  <form method="POST" action="/admin/seasons/close" class="form card"
+        data-confirm="Päätetäänkö <%= season.name %>? Suljetulle kaudelle ei voi enää kirjata lentopäiviä.">
+    <div class="form-row">
+      <div class="form-group">
+        <label for="end_date">Kauden viimeinen päivä</label>
+        <input type="date" id="end_date" name="end_date" value="<%= endDefault %>" required>
+        <% if (lastFlight) { %><p class="text-muted">Viimeisin lentopäivä: <%= lastFlight.split('-').reverse().map(Number).join('.') %></p><% } %>
+      </div>
+      <div class="form-group">
+        <label for="new_name">Uuden kauden nimi</label>
+        <input type="text" id="new_name" name="new_name" value="<%= newName %>" required>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button type="submit" class="btn btn-warning">Päätä kausi ja aloita uusi</button>
+      <a href="/admin/seasons" class="btn">Peruuta</a>
+    </div>
+  </form>
+</div>
+
+<%- include('../partials/footer') %>

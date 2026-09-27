@@ -15,9 +15,15 @@ document.addEventListener('DOMContentLoaded', function () {
   // Toggle selected class on click
   options.forEach(function (opt) {
     var cb = opt.querySelector('input[type="checkbox"]');
+    var towInput = opt.querySelector('.pilot-tow-input');
     cb.addEventListener('change', function () {
       opt.classList.toggle('selected', cb.checked);
+      if (towInput) {
+        towInput.hidden = !cb.checked;
+        if (cb.checked) towInput.focus();
+      }
     });
+
   });
 
   // Add new pilots

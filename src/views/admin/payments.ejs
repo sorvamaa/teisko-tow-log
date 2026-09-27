@@ -1,7 +1,14 @@
 <%- include('../partials/header') %>
 
+<% const typeLabel = { daily: 'Päivämaksu', season: 'Kausikortti', per_tow: 'Hinausmaksu (per hinaus)' }; %>
+
 <div class="page">
-  <h1>Hinausmaksut</h1>
+  <div class="page-header">
+    <h1>Hinausmaksut</h1>
+    <div class="btn-group">
+      <a href="/admin/balances" class="btn">Maksutilanne</a>
+    </div>
+  </div>
 
   <% if (errors) { %>
     <div class="alert alert-error"><% errors.forEach(e => { %><p><%= e.msg %></p><% }) %></div>
@@ -16,16 +23,31 @@
           <select id="pilot_id" name="pilot_id" required>
             <option value="">Valitse...</option>
             <% pilots.forEach(p => { %>
-              <option value="<%= p.id %>"><%= p.name %></option>
+              <option value="<%= p.id %>"><%= p.name %><%= p.billing_type === 'per_tow' ? ' (per hinaus)' : '' %></option>
             <% }) %>
           </select>
         </div>
         <div class="form-group">
+          <label for="season_id">Kausi</label>
+          <select id="season_id" name="season_id" required>
+            <% seasons.forEach(s => { %>
+              <option value="<%= s.id %>" <%= openSeason && s.id === openSeason.id ? 'selected' : '' %>><%= s.name %><%= s.end_date ? ' (suljettu)' : '' %></option>
+            <% }) %>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
           <label for="type">Tyyppi</label>
           <select id="type" name="type" required>
-            <option value="daily">Päivämaksu (10 &euro;)</option>
-            <option value="season">Kausikortti (50 &euro;)</option>
+            <option value="daily">Päivämaksu<%= openSeason ? ' (' + eur(parseFloat(openSeason.price_daily)) + ')' : '' %></option>
+            <option value="season">Kausikortti<%= openSeason ? ' (' + eur(parseFloat(openSeason.price_season)) + ')' : '' %></option>
+            <option value="per_tow">Hinausmaksu (per hinaus, summa käsin)</option>
           </select>
+        </div>
+        <div class="form-group">
+          <label for="amount">Summa (€) <span class="text-muted">– vain hinausmaksuille</span></label>
+          <input type="text" inputmode="decimal" id="amount" name="amount" placeholder="esim. 245">
         </div>
       </div>
       <div class="form-row">
@@ -46,18 +68,19 @@
         <label for="note">Huomautus</label>
         <input type="text" id="note" name="note">
       </div>
+      <p class="text-muted">Päivämaksun ja kausikortin summa tulee valitun kauden hinnoista.</p>
       <button type="submit" class="btn btn-primary">Kirjaa maksu</button>
     </form>
   </div>
 
   <h2>Maksuhistoria</h2>
-  <p class="text-muted">Muokkaa kentt&auml;&auml; ja paina Tallenna. Poista poistaa maksun lopullisesti.</p>
+  <p class="text-muted">Muokkaa kenttää ja paina Tallenna. Poista poistaa maksun lopullisesti.</p>
   <% if (payments.length === 0) { %>
     <p class="empty-state">Ei maksuja.</p>
   <% } else { %>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Pvm</th><th>Pilotti</th><th>Tyyppi</th><th>Maksutapa</th><th>Huomautus</th><th>Toiminnot</th></tr></thead>
+        <thead><tr><th>Pvm</th><th>Pilotti</th><th>Kausi</th><th>Tyyppi</th><th>Summa</th><th>Maksutapa</th><th>Huomautus</th><th>Toiminnot</th></tr></thead>
         <tbody>
           <% payments.forEach(p => { %>
             <tr>
@@ -70,10 +93,26 @@
                 </select>
               </td>
               <td>
-                <select name="type" form="payment-<%= p.id %>" class="input-table" required>
-                  <option value="daily" <%= p.type === 'daily' ? 'selected' : '' %>>Päivämaksu 10 &euro;</option>
-                  <option value="season" <%= p.type === 'season' ? 'selected' : '' %>>Kausikortti 50 &euro;</option>
+                <select name="season_id" form="payment-<%= p.id %>" class="input-table" required>
+                  <% seasons.forEach(s => { %>
+                    <option value="<%= s.id %>" <%= s.id === p.season_id ? 'selected' : '' %>><%= s.name %></option>
+                  <% }) %>
                 </select>
+              </td>
+              <td>
+                <select name="type" form="payment-<%= p.id %>" class="input-table" required>
+                  <% ['daily', 'season', 'per_tow'].forEach(t => { %>
+                    <option value="<%= t %>" <%= p.type === t ? 'selected' : '' %>><%= typeLabel[t] %></option>
+                  <% }) %>
+                </select>
+              </td>
+              <td>
+                <% if (p.type === 'per_tow') { %>
+                  <input type="text" inputmode="decimal" name="amount" form="payment-<%= p.id %>" value="<%= parseFloat(p.amount) %>" class="input-table input-small">
+                <% } else { %>
+                  <%= eur(parseFloat(p.amount)) %>
+                  <input type="hidden" name="amount" form="payment-<%= p.id %>" value="<%= parseFloat(p.amount) %>">
+                <% } %>
               </td>
               <td>
                 <select name="payment_method" form="payment-<%= p.id %>" class="input-table" required>
@@ -101,7 +140,7 @@
     <% payments.forEach(p => { %>
       <form id="payment-<%= p.id %>" method="POST" action="/admin/payments/<%= p.id %>"></form>
       <form id="payment-delete-<%= p.id %>" method="POST" action="/admin/payments/<%= p.id %>/delete"
-            data-confirm="Poistetaanko maksu: <%= p.pilot_name %>, <%= p.type === 'season' ? 'kausikortti 50 €' : 'päivämaksu 10 €' %>? Tätä ei voi perua."></form>
+            data-confirm="Poistetaanko maksu: <%= p.pilot_name %>, <%= typeLabel[p.type].toLowerCase() %> <%= eur(parseFloat(p.amount)) %>? Tätä ei voi perua."></form>
     <% }) %>
   <% } %>
 </div>
