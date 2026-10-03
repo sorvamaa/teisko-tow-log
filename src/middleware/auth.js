@@ -24,6 +24,7 @@ function setLocals(req, res, next) {
     name: req.session.userName,
     role: req.session.userRole
   } : null;
+  res.locals.currentPath = req.originalUrl.split('?')[0];
   next();
 }
 

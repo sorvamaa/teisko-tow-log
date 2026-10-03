@@ -3,11 +3,9 @@
 <% const typeLabel = { daily: 'Päivämaksu', season: 'Kausikortti', per_tow: 'Hinausmaksu (per hinaus)' }; %>
 
 <div class="page">
+  <%- include('../partials/payment-tabs') %>
   <div class="page-header">
     <h1>Hinausmaksut</h1>
-    <div class="btn-group">
-      <a href="/admin/balances" class="btn">Maksutilanne</a>
-    </div>
   </div>
 
   <% if (errors) { %>

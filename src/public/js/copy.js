@@ -22,9 +22,4 @@ document.addEventListener('DOMContentLoaded', function () {
       }
     });
   });
-
-  // Valinnat, jotka lähettävät lomakkeen heti
-  document.querySelectorAll('select.auto-submit').forEach(function (sel) {
-    sel.addEventListener('change', function () { sel.form.submit(); });
-  });
 });

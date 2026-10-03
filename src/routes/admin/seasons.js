@@ -92,6 +92,15 @@ router.post('/close', requireAdmin,
   }
 );
 
+// Kausiraportti avoimelle kaudelle (tai uusimmalle, jos mikään ei ole auki)
+router.get('/current/report', requireAdmin, async (req, res) => {
+  const picked = parseInt(req.query.season, 10);
+  const season = (!Number.isNaN(picked) && await seasons.getSeason(picked))
+    || (await seasons.getOpenSeason()) || (await seasons.getAllSeasons())[0];
+  if (!season) return res.render('error', { title: 'Ei kautta', message: 'Yhtään kautta ei ole määritelty.' });
+  res.redirect(`/admin/seasons/${season.id}/report`);
+});
+
 // Kausiraportti (myös suljetuille kausille, lasketaan aina ajantasaisesta datasta)
 router.get('/:id/report', requireAdmin, async (req, res) => {
   const season = await seasons.getSeason(parseInt(req.params.id, 10));
@@ -99,7 +108,7 @@ router.get('/:id/report', requireAdmin, async (req, res) => {
   const from = season.start_str;
   const to = season.end_str || '9999-12-31';
 
-  const [days, vehicles, income, expenses, balances] = await Promise.all([
+  const [days, vehicles, income, expenses, balances, allSeasons] = await Promise.all([
     pool.query(
       `SELECT COUNT(*) AS days,
               (SELECT COALESCE(SUM(fdv.tow_count), 0) FROM flight_day_vehicles fdv
@@ -120,7 +129,8 @@ router.get('/:id/report', requireAdmin, async (req, res) => {
       `SELECT to_char(date, 'YYYY-MM-DD') AS date, amount, purchased_by, description
        FROM expenses WHERE date BETWEEN $1 AND $2 ORDER BY date`, [from, to]
     ),
-    seasons.computeBalances(season)
+    seasons.computeBalances(season),
+    seasons.getAllSeasons()
   ]);
 
   const totalIncome = income.rows.reduce((s, r) => s + parseFloat(r.total), 0);
@@ -129,6 +139,7 @@ router.get('/:id/report', requireAdmin, async (req, res) => {
   res.render('admin/season-report', {
     title: `Kausiraportti – ${season.name}`,
     season,
+    seasons: allSeasons,
     stats: days.rows[0],
     vehicles: vehicles.rows,
     income: income.rows,

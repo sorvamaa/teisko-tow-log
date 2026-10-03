@@ -8,6 +8,14 @@
   <div class="page-header">
     <h1><%= season.name %></h1>
     <div class="btn-group no-print">
+      <% if (seasons.length > 1) { %>
+        <form method="GET" action="/admin/seasons/current/report" class="report-season-form">
+          <select name="season" class="auto-submit" aria-label="Valitse kausi">
+            <% seasons.forEach(s => { %><option value="<%= s.id %>" <%= s.id === season.id ? 'selected' : '' %>><%= s.name %></option><% }) %>
+          </select>
+          <noscript><button type="submit" class="btn">Näytä</button></noscript>
+        </form>
+      <% } %>
       <a href="/admin/balances?season=<%= season.id %>" class="btn">Maksutilanne</a>
       <button type="button" class="btn" id="print-btn">Tulosta / PDF</button>
     </div>

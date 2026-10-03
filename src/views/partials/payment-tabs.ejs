@@ -1,0 +1,6 @@
+<% const tabPath = typeof currentPath === 'string' ? currentPath : ''; %>
+<nav class="tabs no-print" aria-label="Maksut">
+  <a href="/admin/balances"<%- tabPath.startsWith('/admin/balances') ? ' class="active" aria-current="page"' : '' %>>Tilanne</a>
+  <a href="/admin/payments"<%- tabPath.startsWith('/admin/payments') ? ' class="active" aria-current="page"' : '' %>>Maksut</a>
+  <a href="/admin/expenses"<%- tabPath.startsWith('/admin/expenses') ? ' class="active" aria-current="page"' : '' %>>Kulut</a>
+</nav>

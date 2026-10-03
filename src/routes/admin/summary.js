@@ -61,48 +61,7 @@ router.get('/tows', requireAdmin, async (req, res) => {
   });
 });
 
-router.get('/finance', requireAdmin, async (req, res) => {
-  const { from, to } = req.query;
-  const year = new Date().getFullYear();
-  const dateFrom = from || `${year}-01-01`;
-  const dateTo = to || `${year}-12-31`;
-
-  const [income, expenseTotal, paymentsByType, expenseList] = await Promise.all([
-    pool.query(
-      'SELECT COALESCE(SUM(amount), 0) as total FROM payments WHERE date BETWEEN $1 AND $2',
-      [dateFrom, dateTo]
-    ),
-    pool.query(
-      'SELECT COALESCE(SUM(amount), 0) as total FROM expenses WHERE date BETWEEN $1 AND $2',
-      [dateFrom, dateTo]
-    ),
-    pool.query(
-      `SELECT type, COUNT(*) as count, SUM(amount) as total
-       FROM payments WHERE date BETWEEN $1 AND $2
-       GROUP BY type`,
-      [dateFrom, dateTo]
-    ),
-    pool.query(
-      `SELECT date, amount, purchased_by, description
-       FROM expenses WHERE date BETWEEN $1 AND $2
-       ORDER BY date DESC`,
-      [dateFrom, dateTo]
-    )
-  ]);
-
-  const totalIncome = parseFloat(income.rows[0].total);
-  const totalExpenses = parseFloat(expenseTotal.rows[0].total);
-
-  res.render('admin/summary-finance', {
-    title: 'Talousyhteenveto',
-    dateFrom,
-    dateTo,
-    totalIncome,
-    totalExpenses,
-    result: totalIncome - totalExpenses,
-    paymentsByType: paymentsByType.rows,
-    expenseList: expenseList.rows
-  });
-});
+// Talousyhteenveto on yhdistetty kausiraporttiin
+router.get('/finance', requireAdmin, (req, res) => res.redirect('/admin/seasons/current/report'));
 
 module.exports = router;
