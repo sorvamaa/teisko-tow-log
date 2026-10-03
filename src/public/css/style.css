@@ -749,6 +749,12 @@ th {
   border-bottom: 1px solid var(--color-border);
   margin-bottom: 1.25rem;
   overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+.tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .tabs a {
