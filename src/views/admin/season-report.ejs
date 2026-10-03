@@ -28,6 +28,30 @@
   </div>
 
   <div class="detail-section">
+    <h2>Pilotit ja maksut</h2>
+    <div class="summary-grid">
+      <div class="summary-card"><div class="summary-label">Pilotteja lentänyt</div><div class="summary-value"><%= pilots.pilotsFlown %></div></div>
+      <div class="summary-card"><div class="summary-label">Kausikortteja</div><div class="summary-value"><%= pilots.seasonPass.count %></div><div class="text-muted"><%= money(pilots.seasonPass.total) %></div></div>
+      <div class="summary-card"><div class="summary-label">Päivämaksuja</div><div class="summary-value"><%= pilots.daily.count %></div><div class="text-muted"><%= money(pilots.daily.total) %> · <%= pilots.daily.pilots %> pilottia</div></div>
+      <div class="summary-card"><div class="summary-label">Maksuvapaita</div><div class="summary-value"><%= pilots.exempt.length %></div></div>
+    </div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Ryhmä</th><th>Kpl</th><th>Pilotit</th></tr></thead>
+      <tbody>
+        <tr><td>Kausikortti</td><td><%= pilots.seasonPass.count %></td><td><%= pilots.seasonPass.names.join(', ') || '–' %></td></tr>
+        <tr><td>Päivämaksu</td><td><%= pilots.daily.count %></td><td><%= pilots.daily.list.map(d => d.name + (d.count > 1 ? ' (' + d.count + ')' : '')).join(', ') || '–' %></td></tr>
+        <tr><td>Maksuvapaa</td><td><%= pilots.exempt.length %></td><td><%= pilots.exempt.map(e => e.name).join(', ') || '–' %></td></tr>
+        <% pilots.perTow.forEach(t => { %>
+          <tr><td>Per hinaus</td><td><%= t.tows %> hin.</td><td><%= t.name %> – <%= t.days %> lentopäivää, maksettu <%= money(t.paid) %></td></tr>
+        <% }) %>
+      </tbody>
+    </table></div>
+    <% if (pilots.checks.length) { %>
+      <p class="text-muted"><strong>Tarkistettavaa:</strong> <%= pilots.checks.map(c => c.name + ': ' + c.text).join(' · ') %></p>
+    <% } %>
+  </div>
+
+  <div class="detail-section">
     <h2>Hinaukset ajoneuvoittain</h2>
     <% if (!vehicles.length) { %><p class="text-muted">Ei hinauksia.</p><% } else { %>
       <div class="table-wrap"><table>

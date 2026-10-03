@@ -161,7 +161,46 @@ function summaryMessage(rows, season) {
   return lines.join('\n');
 }
 
+// Kauden pilottiyhteenveto kausiraporttiin (laskettu computeBalances-riveistä)
+function pilotSummary(rows) {
+  const byName = (a, b) => a.name.localeCompare(b.name, 'fi');
+  const normal = rows.filter(r => r.billingType !== 'per_tow');
+  const flown = normal.filter(r => r.days > 0);
+  const perTow = rows.filter(r => r.billingType === 'per_tow').sort(byName);
+  const seasonPass = normal.filter(r => r.seasonPass && !r.exempt).sort(byName);
+  const daily = normal.filter(r => r.dailyCount > 0 && !r.exempt).sort(byName);
+  const exempt = rows.filter(r => r.exempt).sort(byName);
+
+  // Mahdolliset kirjausvirheet: maksu ilman vastaavaa lentopäivää
+  const checks = [];
+  normal.forEach(r => {
+    if (r.seasonPass && r.days === 0) checks.push({ name: r.name, text: 'kausikortti maksettu, ei kirjattuja lentopäiviä' });
+    if (r.dailyCount > r.days) checks.push({ name: r.name, text: `päivämaksuja ${r.dailyCount}, lentopäiviä ${r.days}` });
+    if (r.seasonPass && r.dailyCount > 0) checks.push({ name: r.name, text: `kausikortin lisäksi ${r.dailyCount} päivämaksua` });
+  });
+  checks.sort(byName);
+
+  return {
+    pilotsFlown: flown.length,
+    perTow: perTow.map(r => ({ name: r.name, days: r.days, tows: r.tows, paid: r.totalPaid })),
+    seasonPass: {
+      count: seasonPass.length,
+      total: seasonPass.reduce((s, r) => s + r.totalPaid - r.dailyPaid - r.perTowPaid, 0),
+      flown: seasonPass.filter(r => r.days > 0).length,
+      names: seasonPass.map(r => r.name)
+    },
+    daily: {
+      count: daily.reduce((s, r) => s + r.dailyCount, 0),
+      total: daily.reduce((s, r) => s + r.dailyPaid, 0),
+      pilots: daily.length,
+      list: daily.map(r => ({ name: r.name, count: r.dailyCount, days: r.days }))
+    },
+    exempt: exempt.map(r => ({ name: r.name, days: r.days, reason: r.exemptReason })),
+    checks
+  };
+}
+
 module.exports = {
   getAllSeasons, getSeason, getOpenSeason, getSeasonForDate, flightDayDateError,
-  computeBalances, messageFor, summaryMessage, eur
+  computeBalances, pilotSummary, messageFor, summaryMessage, eur
 };

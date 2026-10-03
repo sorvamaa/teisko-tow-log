@@ -135,7 +135,8 @@ router.get('/:id/report', requireAdmin, async (req, res) => {
     expenses: expenses.rows,
     totalIncome,
     totalExpenses,
-    balances
+    balances,
+    pilots: seasons.pilotSummary(balances.rows)
   });
 });
 
